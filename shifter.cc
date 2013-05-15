@@ -61,6 +61,18 @@ static AVStream * addStream(AVFormatContext *pFormatCtx, AVStream *pInStream) {
     pOutCodecCtx->extradata         = pInCodecCtx->extradata;
     pOutCodecCtx->extradata_size    = pInCodecCtx->extradata_size;
 
+    // pOutCodecCtx->sample_fmt        = pInCodecCtx->sample_fmt;
+    // pOutCodecCtx->sample_rate       = pInCodecCtx->sample_rate;
+    // pOutCodecCtx->channels          = pInCodecCtx->channels;
+    // pOutCodecCtx->frame_size        = pInCodecCtx->frame_size;
+    // pOutCodecCtx->block_align       = pInCodecCtx->block_align;
+
+    // pOutCodecCtx->width             = pInCodecCtx->width;
+    // pOutCodecCtx->height            = pInCodecCtx->height;
+    // pOutCodecCtx->pix_fmt           = pInCodecCtx->pix_fmt;
+    // pOutCodecCtx->time_base         = pInCodecCtx->time_base;
+
+
     // cout << "addStream 4" << endl;
 
 
@@ -193,17 +205,19 @@ int main(int argc, char **argv)
         // cout << "checking streams for video, current stream type = " << pInFormatCtx->streams[i]->codec->codec_type;
         // cout << " AVMEDIA_TYPE_VIDEO = " << AVMEDIA_TYPE_VIDEO << " AVMEDIA_TYPE_AUDIO = " <<  AVMEDIA_TYPE_AUDIO << endl;
 
-        int64_t durationInt = pInFormatCtx->duration;
-        double durationSeconds = (double)durationInt / AV_TIME_BASE;        
-        double fps = av_q2d(pInFormatCtx->streams[i]->avg_frame_rate);
-        unsigned int frameCount = 0;
-        if (pInFormatCtx->streams[i]->nb_frames > 0) {
-            frameCount = pInFormatCtx->streams[i]->nb_frames;
-        }
-        else {
-            frameCount = floor(durationSeconds * fps);
-        } 
-        if (frameCount <= 0) continue;
+        // all streams are welcome. if there are bad ones we'll have to find them elsewhere
+        // int64_t durationInt = pInFormatCtx->duration;
+        // double durationSeconds = (double)durationInt / AV_TIME_BASE;        
+        // double fps = av_q2d(pInFormatCtx->streams[i]->avg_frame_rate);
+        
+        // unsigned int frameCount = 0;
+        // if (pInFormatCtx->streams[i]->nb_frames > 0) {
+        //     frameCount = pInFormatCtx->streams[i]->nb_frames;
+        // }
+        // else {
+        //     frameCount = floor(durationSeconds * fps);
+        // } 
+        // if (frameCount <= 0) continue;
 
         switch (pInFormatCtx->streams[i]->codec->codec_type) {
             case AVMEDIA_TYPE_VIDEO:
@@ -262,10 +276,11 @@ int main(int argc, char **argv)
     const unsigned long MAX_PACKETS = 1000000;
     unsigned long iPacket = 0;
     double ptsZero = 0, dtsZero = 0;
-
+    
     do {
         // double segmentTime;
         AVPacket packet;
+        av_init_packet(&packet);
 
         decodeDone = av_read_frame(pInFormatCtx, &packet);       
         if (decodeDone < 0) {
@@ -282,11 +297,13 @@ int main(int argc, char **argv)
             dtsZero = packet.dts;
         }
 
-        // cout << "before packet pts dts " << packet.pts << " " << packet.dts;
+        int iStreamIndex = packet.stream_index;
+        int isAudio = iStreamIndex == audioIndex;
+        int isVideo = iStreamIndex == videoIndex;
+
+        // cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
         packet.pts = packet.pts - ptsZero + tsShift;
         packet.dts = packet.dts - dtsZero + tsShift;
-        // packet.pts += tsShift;
-        // packet.dts += tsShift;
         // cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
 
 
