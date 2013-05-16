@@ -205,19 +205,21 @@ int main(int argc, char **argv)
         // cout << "checking streams for video, current stream type = " << pInFormatCtx->streams[i]->codec->codec_type;
         // cout << " AVMEDIA_TYPE_VIDEO = " << AVMEDIA_TYPE_VIDEO << " AVMEDIA_TYPE_AUDIO = " <<  AVMEDIA_TYPE_AUDIO << endl;
 
-        // all streams are welcome. if there are bad ones we'll have to find them elsewhere
-        // int64_t durationInt = pInFormatCtx->duration;
-        // double durationSeconds = (double)durationInt / AV_TIME_BASE;        
-        // double fps = av_q2d(pInFormatCtx->streams[i]->avg_frame_rate);
-        
-        // unsigned int frameCount = 0;
-        // if (pInFormatCtx->streams[i]->nb_frames > 0) {
-        //     frameCount = pInFormatCtx->streams[i]->nb_frames;
-        // }
-        // else {
-        //     frameCount = floor(durationSeconds * fps);
-        // } 
-        // if (frameCount <= 0) continue;
+        // skipping bad streams again again
+        if (pInFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+            int64_t durationInt = pInFormatCtx->duration;
+            double durationSeconds = (double)durationInt / AV_TIME_BASE;        
+            double fps = av_q2d(pInFormatCtx->streams[i]->avg_frame_rate);
+            
+            unsigned int frameCount = 0;
+            if (pInFormatCtx->streams[i]->nb_frames > 0) {
+                frameCount = pInFormatCtx->streams[i]->nb_frames;
+            }
+            else {
+                frameCount = floor(durationSeconds * fps);
+            } 
+            if (frameCount <= 0) continue;
+        }
 
         switch (pInFormatCtx->streams[i]->codec->codec_type) {
             case AVMEDIA_TYPE_VIDEO:
@@ -297,9 +299,9 @@ int main(int argc, char **argv)
             dtsZero = packet.dts;
         }
 
-        int iStreamIndex = packet.stream_index;
-        int isAudio = iStreamIndex == audioIndex;
-        int isVideo = iStreamIndex == videoIndex;
+        // int iStreamIndex = packet.stream_index;
+        // int isAudio = iStreamIndex == audioIndex;
+        // int isVideo = iStreamIndex == videoIndex;
 
         // cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
         packet.pts = packet.pts - ptsZero + tsShift;
