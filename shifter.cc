@@ -271,6 +271,7 @@ int main(int argc, char **argv)
     // cout << "0.992" << endl;
     const unsigned long MAX_PACKETS = 1000000;
     unsigned long iPacket = 0;
+    bool initZeros = true;
     double ptsZero = 0, dtsZero = 0;
     
     do {
@@ -288,16 +289,22 @@ int main(int argc, char **argv)
             av_free_packet(&packet);
             break;
         }
-        if (iPacket == 0) {
-            ptsZero = packet.pts;
-            dtsZero = packet.dts;
-        }
 
         int iStreamIndex = packet.stream_index;
         int isAudio = iStreamIndex == audioIndex;
         int isVideo = iStreamIndex == videoIndex;
 
-        // cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
+        if (initZeros && isVideo) {
+            initZeros = false;
+            ptsZero = packet.pts;
+            dtsZero = packet.dts;
+        }
+        else if (initZeros) {
+            continue;
+        }
+
+
+        cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
         if (isVideo) {
             packet.pts = packet.pts - ptsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;
@@ -306,7 +313,7 @@ int main(int argc, char **argv)
             packet.pts = packet.pts - dtsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;            
         }
-        // cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
+        cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
 
 
         ret = av_interleaved_write_frame(pOutFormatCtx, &packet);
