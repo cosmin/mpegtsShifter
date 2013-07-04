@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         cout << "Could not open input file, make sure it is an mpegts file: " << ret << endl;
         exit(1);
     }
-    pInFormatCtx->max_analyze_duration = 1000000;
+    // pInFormatCtx->max_analyze_duration = 1000000;
     // cout << "0.6" << endl;
 
     if (avformat_find_stream_info(pInFormatCtx, NULL) < 0) {
