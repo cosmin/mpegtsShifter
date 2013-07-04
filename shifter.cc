@@ -21,6 +21,12 @@ static AVStream * addStream(AVFormatContext *pFormatCtx, AVStream *pInStream) {
 
     // cout << "addStream 0" << endl;
 
+    pOutStream = avformat_new_stream(pFormatCtx, 0);
+    if (!pOutStream) {
+        cout << "Could not allocate stream" << endl;
+        exit(1);
+    }
+
     // Get a pointer to the codec context for the video stream
     pInCodecCtx = pInStream->codec;
     pCodec      = avcodec_find_decoder(pInCodecCtx->codec_id);
@@ -38,18 +44,6 @@ static AVStream * addStream(AVFormatContext *pFormatCtx, AVStream *pInStream) {
         cout << "Unable to open codec (" << pInCodecCtx->codec_name << ")" << endl;
         exit(1);
     }
-
-    // cout << "addStream 2" << endl;
-
-
-    pOutStream = avformat_new_stream(pFormatCtx, pCodec);
-    if (!pOutStream) {
-        cout << "Could not allocate stream" << endl;
-        exit(1);
-    }
-
-    // cout << "addStream 3" << endl;
-
 
     pOutCodecCtx = pOutStream->codec;
 
@@ -223,13 +217,13 @@ int main(int argc, char **argv)
 
         switch (pInFormatCtx->streams[i]->codec->codec_type) {
             case AVMEDIA_TYPE_VIDEO:
-                // cout << "Initial for loop VIDEO CODEC, frames " << frameCount << endl;
+                cout << "Initial for loop adding VIDEO CODEC" << endl;
                 videoIndex = i;
                 pInFormatCtx->streams[i]->discard = AVDISCARD_NONE;
                 pVideoStream = addStream(pOutFormatCtx, pInFormatCtx->streams[i]);
                 break;
             case AVMEDIA_TYPE_AUDIO:
-                // cout << "Initial for loop AUDIO CODEC, frames " << frameCount << endl;
+                cout << "Initial for loop adding AUDIO CODEC" << endl;
                 audioIndex = i;
                 pInFormatCtx->streams[i]->discard = AVDISCARD_NONE;
                 pAudioStream = addStream(pOutFormatCtx, pInFormatCtx->streams[i]);
@@ -299,13 +293,19 @@ int main(int argc, char **argv)
             dtsZero = packet.dts;
         }
 
-        // int iStreamIndex = packet.stream_index;
-        // int isAudio = iStreamIndex == audioIndex;
-        // int isVideo = iStreamIndex == videoIndex;
+        int iStreamIndex = packet.stream_index;
+        int isAudio = iStreamIndex == audioIndex;
+        int isVideo = iStreamIndex == videoIndex;
 
         // cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
-        packet.pts = packet.pts - ptsZero + tsShift;
-        packet.dts = packet.dts - dtsZero + tsShift;
+        if (isVideo) {
+            packet.pts = packet.pts - ptsZero + tsShift;
+            packet.dts = packet.dts - dtsZero + tsShift;
+        }
+        else if (isAudio) {
+            packet.pts = packet.pts - dtsZero + tsShift;
+            packet.dts = packet.dts - dtsZero + tsShift;            
+        }
         // cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
 
 
