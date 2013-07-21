@@ -304,7 +304,7 @@ int main(int argc, char **argv)
         }
 
 
-        cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
+        //cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
         if (isVideo) {
             packet.pts = packet.pts - ptsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
             packet.pts = packet.pts - dtsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;            
         }
-        cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
+        //cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
 
 
         ret = av_interleaved_write_frame(pOutFormatCtx, &packet);
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
             cout << "Warning: Could not write frame of stream" << endl;
         }
         else if (ret > 0) {
-            cout <<  "End of stream requested" << endl;
+            //cout <<  "End of stream requested" << endl;
             av_free_packet(&packet);
             break;
         }
