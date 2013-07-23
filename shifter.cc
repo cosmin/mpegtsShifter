@@ -123,7 +123,6 @@ int main(int argc, char **argv)
     AVFormatContext *pInFormatCtx = NULL;
     AVFormatContext *pOutFormatCtx = NULL;
     AVStream *pVideoStream = NULL;
-    AVStream *pAudioStream = NULL;
     AVCodec *pCodec = NULL;
     int videoIndex;
     int audioIndex;
@@ -162,9 +161,9 @@ int main(int argc, char **argv)
         cout << "Could not open input file, make sure it is an mpegts file: " << ret << endl;
         exit(1);
     }
-    // pInFormatCtx->max_analyze_duration = 1000000;
+     //pInFormatCtx->max_analyze_duration = 1000000;
     // cout << "0.6" << endl;
-
+    
     if (avformat_find_stream_info(pInFormatCtx, NULL) < 0) {
         cout << "Could not read stream information" << endl;
         exit(1);
@@ -220,22 +219,31 @@ int main(int argc, char **argv)
                 cout << "Initial for loop adding VIDEO CODEC" << endl;
                 videoIndex = i;
                 pInFormatCtx->streams[i]->discard = AVDISCARD_NONE;
+
                 pVideoStream = addStream(pOutFormatCtx, pInFormatCtx->streams[i]);
+
                 break;
             case AVMEDIA_TYPE_AUDIO:
                 cout << "Initial for loop adding AUDIO CODEC" << endl;
                 audioIndex = i;
+
                 pInFormatCtx->streams[i]->discard = AVDISCARD_NONE;
-                pAudioStream = addStream(pOutFormatCtx, pInFormatCtx->streams[i]);
+                if (!pInFormatCtx->streams[i]->codec->channels) {
+                    cout << "WARNING: No channels found (skipping) audio stream " << i << endl;
+                }
+                else {
+                    addStream(pOutFormatCtx, pInFormatCtx->streams[i]);
+                }
+
                 break;
             default:
                 // cout << "Initial for loop AVDISCARD_ALL" << endl;
                 pInFormatCtx->streams[i]->discard = AVDISCARD_ALL;
+
                 break;
         }
     }
-    // cout << "0.95" << endl;
-    
+    // cout << "0.95" << endl;   
     pCodec = avcodec_find_decoder(pVideoStream->codec->codec_id);
     if (!pCodec) {
         cout << "Could not find video decoder, key frames will not be honored" << endl;
@@ -280,6 +288,7 @@ int main(int argc, char **argv)
         av_init_packet(&packet);
 
         decodeDone = av_read_frame(pInFormatCtx, &packet);       
+
         if (decodeDone < 0) {
             break;
         }
