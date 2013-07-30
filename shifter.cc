@@ -281,6 +281,56 @@ int main(int argc, char **argv)
     unsigned long iPacket = 0;
     bool initZeros = true;
     double ptsZero = 0, dtsZero = 0;
+    double firstPtsTime = 0;
+    bool initFirstPTSTime = true;
+    int firstPacketStreamIndex = videoIndex; 
+
+    // find first video packet time
+    do {
+        // double segmentTime;
+        AVPacket packet;
+        av_init_packet(&packet);
+
+        decodeDone = av_read_frame(pInFormatCtx, &packet);       
+
+        if (decodeDone < 0) {
+            break;
+        }
+
+        if (av_dup_packet(&packet) < 0) {
+            cout << "Could not duplicate packet" << endl;
+            av_free_packet(&packet);
+            break;
+        }
+        if (initFirstPTSTime) {
+            firstPtsTime = packet.pts;
+            initFirstPTSTime = false;
+            firstPacketStreamIndex = packet.stream_index;
+        }
+
+
+        int iStreamIndex = packet.stream_index;
+        int isVideo = iStreamIndex == videoIndex;
+
+        if (initZeros && isVideo) {
+            initZeros = false;
+            ptsZero = packet.pts;
+            dtsZero = packet.dts;
+            if (dtsZero < ptsZero) dtsZero = ptsZero;
+        }
+
+        av_free_packet(&packet);
+        if (iPacket++ >= MAX_PACKETS) break;
+
+    } while (initZeros);
+    cout << "found ptsZero and dtsZero " << ptsZero/90000 << " " << dtsZero/90000;
+    cout << " first packet pts time " << firstPtsTime/90000 << " first stream index " << firstPacketStreamIndex;
+    cout << " audio index " << audioIndex << " video index " << videoIndex << endl;
+
+    // seek beginning of file
+    av_seek_frame(pInFormatCtx, firstPacketStreamIndex, firstPtsTime, AVSEEK_FLAG_BACKWARD);
+
+    cout << "rewound file to beginning" << endl;
     
     do {
         // double segmentTime;
@@ -303,24 +353,22 @@ int main(int argc, char **argv)
         int isAudio = iStreamIndex == audioIndex;
         int isVideo = iStreamIndex == videoIndex;
 
-        if (initZeros && isVideo) {
-            initZeros = false;
-            ptsZero = packet.pts;
-            dtsZero = packet.dts;
-        }
-        else if (initZeros) {
-            continue;
-        }
-
-
         //cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
         if (isVideo) {
             packet.pts = packet.pts - ptsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;
         }
         else if (isAudio) {
-            packet.pts = packet.pts - dtsZero + tsShift;
-            packet.dts = packet.dts - dtsZero + tsShift;            
+            if ( (packet.pts - dtsZero + tsShift) > 0.0 && (packet.dts - dtsZero + tsShift) > 0.0) {
+                packet.pts = packet.pts - ptsZero + tsShift;
+                packet.dts = packet.dts - dtsZero + tsShift;            
+            }
+            else {
+                cout << "audio pts or dts would be negative, skipping pts,dts " << packet.pts - ptsZero + tsShift;
+                cout << "," << packet.dts - dtsZero + tsShift << endl;
+                av_free_packet(&packet);
+                continue;
+            }
         }
         //cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
 
