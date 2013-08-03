@@ -281,8 +281,8 @@ int main(int argc, char **argv)
     unsigned long iPacket = 0;
     bool initZeros = true;
     double ptsZero = 0, dtsZero = 0;
-    double firstPtsTime = 0;
-    bool initFirstPTSTime = true;
+    double firstDtsTime = 0;
+    bool initFirstDTSTime = true;
     int firstPacketStreamIndex = videoIndex; 
 
     // find first video packet time
@@ -302,9 +302,9 @@ int main(int argc, char **argv)
             av_free_packet(&packet);
             break;
         }
-        if (initFirstPTSTime) {
-            firstPtsTime = packet.pts;
-            initFirstPTSTime = false;
+        if (initFirstDTSTime) {
+            firstDtsTime = packet.dts;
+            initFirstDTSTime = false;
             firstPacketStreamIndex = packet.stream_index;
         }
 
@@ -323,14 +323,21 @@ int main(int argc, char **argv)
         if (iPacket++ >= MAX_PACKETS) break;
 
     } while (initZeros);
-    cout << "found ptsZero and dtsZero " << ptsZero/90000 << " " << dtsZero/90000;
-    cout << " first packet pts time " << firstPtsTime/90000 << " first stream index " << firstPacketStreamIndex;
-    cout << " audio index " << audioIndex << " video index " << videoIndex << endl;
+
+    // int isFirstAudio = firstPacketStreamIndex == audioIndex;
+    // int isFirstVideo = firstPacketStreamIndex == videoIndex;    
+
+    // cout << "found ptsZero and dtsZero " << ptsZero/90000 << " " << dtsZero/90000;
+    // cout << " first packet dts time " << firstDtsTime/90000 << ", is first stream index audio: " << isFirstAudio;
+    // cout << " video: " << isFirstVideo << endl;
+
+    // flush buffers before seek
+    avcodec_flush_buffers(pVideoStream->codec);
 
     // seek beginning of file
-    av_seek_frame(pInFormatCtx, firstPacketStreamIndex, firstPtsTime, AVSEEK_FLAG_BACKWARD);
+    av_seek_frame(pInFormatCtx, firstPacketStreamIndex, firstDtsTime, AVSEEK_FLAG_BACKWARD);
 
-    cout << "rewound file to beginning" << endl;
+    // cout << "rewound file to beginning" << endl;
     
     do {
         // double segmentTime;
@@ -353,7 +360,7 @@ int main(int argc, char **argv)
         int isAudio = iStreamIndex == audioIndex;
         int isVideo = iStreamIndex == videoIndex;
 
-        //cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << packet.pts << " " << packet.dts;
+        // cout << "A/V type " << isAudio << "/" << isVideo << " before packet pts dts " << (double)packet.pts/90000 << " " << (double)packet.dts/90000;
         if (isVideo) {
             packet.pts = packet.pts - ptsZero + tsShift;
             packet.dts = packet.dts - dtsZero + tsShift;
@@ -370,7 +377,7 @@ int main(int argc, char **argv)
                 continue;
             }
         }
-        //cout << " after packet pts dts " << packet.pts << " " << packet.dts << endl;
+        // cout << " after packet pts dts " << (double)packet.pts/90000 << " " << (double)packet.dts/90000 << endl;
 
 
         ret = av_interleaved_write_frame(pOutFormatCtx, &packet);
