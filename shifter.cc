@@ -88,7 +88,7 @@ static AVStream * addStream(AVFormatContext *pFormatCtx, AVStream *pInStream) {
             pOutCodecCtx->sample_rate = pInCodecCtx->sample_rate;
             pOutCodecCtx->channels = pInCodecCtx->channels;
             pOutCodecCtx->frame_size = pInCodecCtx->frame_size;
-            if ((pInCodecCtx->block_align == 1 && pInCodecCtx->codec_id == CODEC_ID_MP3) || pInCodecCtx->codec_id == CODEC_ID_AC3) {
+            if ((pInCodecCtx->block_align == 1 && pInCodecCtx->codec_id == AV_CODEC_ID_MP3) || pInCodecCtx->codec_id == AV_CODEC_ID_AC3) {
                 pOutCodecCtx->block_align = 0;
             }
             else {
@@ -103,7 +103,7 @@ static AVStream * addStream(AVFormatContext *pFormatCtx, AVStream *pInStream) {
             pOutCodecCtx->has_b_frames = pInCodecCtx->has_b_frames;
 
             if (pFormatCtx->oformat->flags & AVFMT_GLOBALHEADER) {
-                pOutCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                pOutCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
             }
             break;
     default:
